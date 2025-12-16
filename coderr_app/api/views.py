@@ -1,20 +1,17 @@
-"""[DE] API-Views für Offers und OfferDetails. [EN] API views for offers and offer details."""
-
 from django.db.models import Min, Q
-
-from rest_framework import status, viewsets, generics
-from rest_framework.exceptions import NotAuthenticated, PermissionDenied
-from rest_framework.permissions import AllowAny
-from rest_framework.response import Response
-from rest_framework.pagination import PageNumberPagination
+from rest_framework import generics
+from rest_framework import viewsets
+from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from coderr_app.models import Offer, OfferDetail
+from coderr_app.api.permissions import IsBusinessUser, IsOfferOwner
 from coderr_app.api.serializers import (
     OfferDetailOfferSerializer,
     OfferDetailSerializer,
     OfferListSerializer,
     OfferWriteSerializer,
 )
+from rest_framework.pagination import PageNumberPagination
 
 
 class OfferPagination(PageNumberPagination):
@@ -31,24 +28,21 @@ class OfferViewSet(viewsets.ModelViewSet):
     queryset = Offer.objects.all().select_related("user").prefetch_related("details")
     serializer_class = OfferWriteSerializer
     pagination_class = OfferPagination
-    permission_classes = [AllowAny]
+    http_method_names = ["get", "post", "patch", "delete", "head", "options"]
 
-    def _ensure_authenticated(self, request) -> None:
-        """[DE] Wirft 401, wenn der Benutzer nicht eingeloggt ist. [EN] Raises 401 if the user is not authenticated."""
-        user = request.user
-        if not user or not user.is_authenticated:
-            raise NotAuthenticated()
-
-    def _ensure_business_user(self, request) -> None:
-        """[DE] Wirft 403, wenn der Benutzer kein Business-Profil hat. [EN] Raises 403 if user is not a business profile."""
-        profile = getattr(request.user, "profile", None)
-        if not profile or profile.type != "business":
-            raise PermissionDenied("Only business users can perform this action.")
-
-    def _ensure_offer_owner(self, request, offer: Offer) -> None:
-        """[DE] Wirft 403, wenn der Benutzer nicht Owner ist. [EN] Raises 403 if user is not the owner."""
-        if offer.user != request.user:
-            raise PermissionDenied("You are not the owner of this offer.")
+    def get_permissions(self):
+        """[DE] Setzt Permissions abhängig von der Aktion. [EN] Sets permissions depending on the action."""
+        if self.action == "list":
+            permission_classes = [AllowAny]
+        elif self.action == "create":
+            permission_classes = [IsBusinessUser]
+        elif self.action in ["update","partial_update", "destroy"]:
+            permission_classes = [IsAuthenticated, IsOfferOwner]
+        elif self.action == "retrieve":
+            permission_classes = [IsAuthenticated]
+        else:
+            permission_classes = [IsAuthenticated]
+        return [perm() for perm in permission_classes]
 
     def get_serializer_class(self):
         """[DE] Wählt Serializer je nach Aktion. [EN] Chooses serializer depending on the action."""
@@ -90,49 +84,11 @@ class OfferViewSet(viewsets.ModelViewSet):
             return queryset.order_by(ordering)
         return queryset
 
-    def retrieve(self, request, *args, **kwargs):
-        """[DE] Detailansicht eines Offers, nur für authentifizierte User (401). [EN] Offer detail view, only for authenticated users (401)."""
-        self._ensure_authenticated(request)
-        return super().retrieve(request, *args, **kwargs)
-
-    def create(self, request, *args, **kwargs):
-        """[DE] Erstellen eines Offers, nur Business-User (401/403). [EN] Create offer, only business users (401/403)."""
-        self._ensure_authenticated(request)
-        self._ensure_business_user(request)
-        return super().create(request, *args, **kwargs)
-
-    def partial_update(self, request, *args, **kwargs):
-        """[DE] Aktualisiert ein Offer, nur Owner (401/403). [EN] Partially updates an offer, only owner (401/403)."""
-        self._ensure_authenticated(request)
-        offer = self.get_object()
-        self._ensure_offer_owner(request, offer)
-        serializer = self.get_serializer(offer, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
-        return Response(serializer.data)
-
-    def destroy(self, request, *args, **kwargs):
-        """[DE] Löscht ein Offer, nur Owner (401/403). [EN] Deletes an offer, only owner (401/403)."""
-        self._ensure_authenticated(request)
-        offer = self.get_object()
-        self._ensure_offer_owner(request, offer)
-        self.perform_destroy(offer)
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
 
 class OfferDetailView(generics.RetrieveAPIView):
-    """[DE] Detailansicht für ein OfferDetail. [EN] Detail view for a single offer detail."""
+    """Detail view for a single offer detail."""
 
     queryset = OfferDetail.objects.all()
     serializer_class = OfferDetailSerializer
-    permission_classes = [AllowAny]
-
-    def retrieve(self, request, *args, **kwargs):
-        """Erlaubt Zugriff nur für authentifizierte Benutzer (401). [EN] Allows access only for authenticated users (401)."""
-        user = request.user
-        if not user or not user.is_authenticated:
-            raise NotAuthenticated()
-        return super().retrieve(request, *args, **kwargs)
-
-
+    permission_classes = [IsAuthenticated]
 

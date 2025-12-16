@@ -26,7 +26,6 @@ class Offer(models.Model):
         """[DE] String-Repräsentation des Angebots. [EN] String representation of the offer."""
         return self.title
 
-
 class OfferDetail(models.Model):
     """[DE] Detailvariante eines Angebots (z. B. basic/standard/premium). [EN] Detailed variant of an offer (e.g. basic/standard/premium)."""
 
@@ -55,3 +54,37 @@ class OfferDetail(models.Model):
         return f"{self.offer.title} - {self.title}"
     
     
+class Order(models.Model):
+    """[DE] Bestellung, die aus einem OfferDetail erstellt wird. [EN] Order created from an offer detail."""
+
+    STATUS_IN_PROGRESS = "in_progress"
+    STATUS_COMPLETED = "completed"
+    STATUS_CANCELLED = "cancelled"
+    STATUS_CHOICES = [
+        (STATUS_IN_PROGRESS, "In progress"),
+        (STATUS_COMPLETED, "Completed"),
+        (STATUS_CANCELLED, "Cancelled"),
+    ]
+
+    customer_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="customer_orders")
+    business_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="business_orders")
+    title = models.CharField(max_length=255)
+    revisions = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    delivery_time_in_days = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
+    features = models.JSONField(default=list, blank=True)
+    offer_type = models.CharField(max_length=20, choices=OfferDetail.TYPE_CHOICES)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_IN_PROGRESS)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        """[DE] Meta-Informationen für Order. [EN] Meta information for Order."""
+
+        verbose_name = "Order"
+        verbose_name_plural = "Orders"
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        """[DE] String-Repräsentation der Bestellung. [EN] String representation of the order."""
+        return f"Order #{self.pk} - {self.title}"

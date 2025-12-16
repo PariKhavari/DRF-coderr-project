@@ -1,5 +1,6 @@
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
+from django.http import Http404
 from django.shortcuts import get_object_or_404
 
 from rest_framework import generics, status
@@ -62,15 +63,16 @@ class ProfileDetailView(generics.RetrieveUpdateAPIView):
 
     queryset = UserProfile.objects.select_related("user")
     serializer_class = ProfileSerializer
-    permission_classes = [IsAuthenticated, IsProfileOwnerOrReadOnly]
+    permission_classes = [IsAuthenticated,IsProfileOwnerOrReadOnly]
 
     def get_object(self):
-        """Retrieves the profile by user ID."""
-
+        """ Retrieves the profile or raises 404 if not found."""
         user_id = self.kwargs["pk"]
         user = get_object_or_404(User, pk=user_id)
-        return user.profile
-
+        try:
+            return user.profile
+        except UserProfile.DoesNotExist:
+            raise Http404("User profile not found.")
 
 class BusinessProfileListView(generics.ListAPIView):
     """List of all business profiles."""

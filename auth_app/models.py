@@ -19,6 +19,7 @@ class UserProfile(models.Model):
     description = models.TextField(blank=True,default="")
     working_hours = models.CharField( max_length=100,blank=True,default="")
     created_at = models.DateTimeField(auto_now_add=True)
+    uploaded_at= models.DateTimeField(auto_now_add=True, null=True, blank=True)
 
     class Meta:
         verbose_name = "User Profile"

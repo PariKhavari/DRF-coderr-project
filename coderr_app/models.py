@@ -1,8 +1,6 @@
-"""[DE] Modelle für Angebote (Offers) der Coderr-Plattform. [EN] Models for offers of the Coderr platform."""
-
 from django.contrib.auth.models import User
 from django.db import models
-from django.core.validators import MinValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 
 class Offer(models.Model):
@@ -89,3 +87,31 @@ class Order(models.Model):
         """String representation of the order."""
         return f"Order #{self.pk} - {self.title}"
 
+
+class Review(models.Model):
+    """Review of a business user written by a customer user."""
+
+    business_user = models.ForeignKey(User,on_delete=models.CASCADE,related_name="received_reviews")
+    reviewer = models.ForeignKey(User,on_delete=models.CASCADE,related_name="written_reviews")
+    rating = models.PositiveSmallIntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)],)
+    description = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        """Meta settings for Review."""
+
+        verbose_name = "Review"
+        verbose_name_plural = "Reviews"
+        ordering = ["-updated_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["business_user", "reviewer"],
+                name="unique_review_per_business_and_reviewer",
+            )
+        ]
+
+    def __str__(self) -> str:
+        """String representation of the review."""
+
+        return f"Review #{self.pk} by {self.reviewer_id} for {self.business_user_id}"

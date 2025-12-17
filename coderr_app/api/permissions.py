@@ -1,5 +1,3 @@
-"""[DE] Permissions für Offers. [EN] Permissions for offers."""
-
 from rest_framework import exceptions
 from rest_framework.permissions import BasePermission
 
@@ -65,5 +63,25 @@ class IsOrderBusinessUser(BasePermission):
         if not profile or profile.type != "business":
             raise exceptions.PermissionDenied("Only business users can update orders.")
         if obj.business_user != user:
+            raise exceptions.PermissionDenied(self.message)
+        return True
+    
+
+    """[DE] Permissions für Offers, Orders und Reviews.
+[EN] Permissions for offers, orders and reviews.
+"""
+
+
+class IsReviewOwner(BasePermission):
+    """Allows changes only for the review creator."""
+
+    message = "You are not allowed to modify this review."
+
+    def has_object_permission(self, request, view, obj) -> bool:
+        """Checks whether the user is the reviewer."""
+        user = request.user
+        if not user or not user.is_authenticated:
+            raise exceptions.NotAuthenticated()
+        if obj.reviewer != user:
             raise exceptions.PermissionDenied(self.message)
         return True

@@ -1,14 +1,13 @@
-"""[DE] URL-Routing für Offers und OfferDetails. [EN] URL routing for offers and offer details."""
-
 from django.urls import include, path
-
 from rest_framework.routers import DefaultRouter
+from coderr_app.api.views import OfferDetailView, OfferViewSet, OrderViewSet, OrderCountView, CompletedOrderCountView,ReviewViewSet
 
-from coderr_app.api.views import OfferDetailView, OfferViewSet, OrderViewSet, OrderCountView, CompletedOrderCountView
 
 router = DefaultRouter()
 router.register("offers", OfferViewSet, basename="offer")
 router.register("orders", OrderViewSet, basename="order")
+router.register("reviews", ReviewViewSet, basename="review")
+
 
 urlpatterns = [
     path("", include(router.urls)),

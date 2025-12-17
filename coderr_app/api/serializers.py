@@ -1,15 +1,10 @@
-"""[DE] Serializer für Offers und OfferDetails. [EN] Serializers for offers and offer details."""
-
 from django.contrib.auth.models import User
-
 from django.urls import reverse
 from django.db.models import Min
 from django.db.models import QuerySet
 from django.db.models import Q
-
 from rest_framework import serializers
-
-from coderr_app.models import Offer, OfferDetail, Order
+from coderr_app.models import Offer, OfferDetail, Order, Review
 
 
 class OfferDetailSerializer(serializers.ModelSerializer):
@@ -21,7 +16,6 @@ class OfferDetailSerializer(serializers.ModelSerializer):
         model = OfferDetail
         fields = ["id", "title", "revisions",
                   "delivery_time_in_days", "price", "features", "offer_type"]
-
 
 class OfferWriteSerializer(serializers.ModelSerializer):
     """[DE] Serializer für das Erstellen/Aktualisieren eines Offers inkl. Details. [EN] Serializer for creating/updating an offer including details."""
@@ -111,7 +105,6 @@ class OfferWriteSerializer(serializers.ModelSerializer):
             instance.details.all(), many=True).data
         return data
 
-
 class OfferListSerializer(serializers.ModelSerializer):
     """[DE] Serializer für die Offers-Liste. [EN] Serializer for the offers list."""
 
@@ -152,7 +145,6 @@ class OfferListSerializer(serializers.ModelSerializer):
         user = obj.user
         return {"first_name": user.first_name, "last_name": user.last_name, "username": user.username}
 
-
 class OfferDetailOfferSerializer(serializers.ModelSerializer):
     """[DE] Serializer für Offer-Detailsicht. [EN] Serializer for single-offer detail view."""
 
@@ -188,6 +180,7 @@ class OfferDetailOfferSerializer(serializers.ModelSerializer):
         return obj.details.aggregate(value=Min("delivery_time_in_days"))["value"]
 
 
+
 class OrderSerializer(serializers.ModelSerializer):
     """[DE] Serializer für die Darstellung einer Bestellung. [EN] Serializer for representing an order."""
 
@@ -203,7 +196,6 @@ class OrderSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "customer_user", "business_user", "title", "revisions",
                             "delivery_time_in_days", "price", "features", "offer_type", "created_at", "updated_at"]
 
-
 class OrderCreateSerializer(serializers.Serializer):
     """[DE] Serializer für das Erstellen einer Bestellung via offer_detail_id.
     [EN] Serializer for creating an order via offer_detail_id.
@@ -218,3 +210,64 @@ class OrderCreateSerializer(serializers.Serializer):
         data = OrderSerializer(instance).data
         data.pop("updated_at", None)
         return data
+
+
+
+class ReviewSerializer(serializers.ModelSerializer):
+    """Serializer for reviews."""
+
+    business_user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
+    reviewer = serializers.IntegerField(source="reviewer.id", read_only=True)
+
+    class Meta:
+        """Meta settings for ReviewSerializer."""
+
+        model = Review
+        fields = [
+            "id",
+            "business_user",
+            "reviewer",
+            "rating",
+            "description",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "reviewer", "created_at", "updated_at"]
+
+    def validate_business_user(self, value: int) -> int:
+        """[DE] Prüft, ob Business-User existiert und ein Business-Profil hat.
+        [EN] Validates that the business user exists and has a business profile.
+        """
+        user = User.objects.filter(id=value).first()
+        profile = getattr(user, "profile", None) if user else None
+        if not user or not profile or profile.type != "business":
+            raise serializers.ValidationError("Business user not found or not of type 'business'.")
+        return value
+
+    def create(self, validated_data: dict) -> Review:
+        """[DE] Erstellt ein Review mit dem eingeloggten User als Reviewer.
+        [EN] Creates a review with the current user as reviewer.
+        """
+        request = self.context.get("request")
+        reviewer = request.user
+        business_user_id = validated_data.pop("business_user")
+        business_user = User.objects.get(id=business_user_id)
+        return Review.objects.create(
+            business_user=business_user,
+            reviewer=reviewer,
+            **validated_data,
+        )
+
+    def update(self, instance: Review, validated_data: dict) -> Review:
+        """[DE] Aktualisiert nur rating und description.
+        [EN] Updates only rating and description.
+        """
+        rating = validated_data.get("rating")
+        description = validated_data.get("description")
+        if rating is not None:
+            instance.rating = rating
+        if description is not None:
+            instance.description = description
+        instance.save()
+        return instance
+

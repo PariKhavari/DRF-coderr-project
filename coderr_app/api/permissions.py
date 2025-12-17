@@ -5,7 +5,7 @@ from rest_framework.permissions import BasePermission
 
 
 class IsBusinessUser(BasePermission):
-    """[DE] Erlaubt Zugriff nur für Business-User. [EN] Allows access only for business users."""
+    """Allows access only for business users."""
 
     message = "Only business users can perform this action."
 
@@ -36,7 +36,7 @@ class IsOfferOwner(BasePermission):
 
 
 class IsCustomerUser(BasePermission):
-    """[DE] Erlaubt Aktionen nur für Customer-Profile. [EN] Allows actions only for customer profiles."""
+    """Allows actions only for customer profiles."""
 
     message = "Only customer users can perform this action."
 
@@ -52,12 +52,12 @@ class IsCustomerUser(BasePermission):
 
 
 class IsOrderBusinessUser(BasePermission):
-    """[DE] Erlaubt Status-Updates nur für den Business-User der Order. [EN] Allows status updates only for the order's business user."""
+    """llows status updates only for the order's business user."""
 
     message = "You are not allowed to update this order."
 
     def has_object_permission(self, request, view, obj) -> bool:
-        """[DE] Prüft, ob Benutzer Business-User dieser Order ist. [EN] Checks whether user is the business user of this order."""
+        """Checks whether user is the business user of this order."""
         user = request.user
         if not user or not user.is_authenticated:
             raise exceptions.NotAuthenticated()

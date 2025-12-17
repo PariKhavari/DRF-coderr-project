@@ -6,7 +6,7 @@ from django.core.validators import MinValueValidator
 
 
 class Offer(models.Model):
-    """[DE] Hauptangebot, das von einem Business-User erstellt wird. [EN] Main offer created by a business user."""
+    """Main offer created by a business user."""
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="offers")
     title = models.CharField(max_length=255)
@@ -16,18 +16,18 @@ class Offer(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        """[DE] Meta-Informationen für Offer. [EN] Meta information for Offer."""
+        """Meta information for Offer."""
 
         verbose_name = "Offer"
         verbose_name_plural = "Offers"
         ordering = ["-updated_at"]
 
     def __str__(self) -> str:
-        """[DE] String-Repräsentation des Angebots. [EN] String representation of the offer."""
+        """String representation of the offer."""
         return self.title
 
 class OfferDetail(models.Model):
-    """[DE] Detailvariante eines Angebots (z. B. basic/standard/premium). [EN] Detailed variant of an offer (e.g. basic/standard/premium)."""
+    """Detailed variant of an offer (e.g. basic/standard/premium)."""
 
     TYPE_BASIC = "basic"
     TYPE_STANDARD = "standard"
@@ -43,7 +43,7 @@ class OfferDetail(models.Model):
     offer_type = models.CharField(max_length=20, choices=TYPE_CHOICES)
 
     class Meta:
-        """[DE] Meta-Informationen für OfferDetail. [EN] Meta information for OfferDetail."""
+        """Meta information for OfferDetail."""
 
         verbose_name = "Offer Detail"
         verbose_name_plural = "Offer Details"
@@ -55,7 +55,7 @@ class OfferDetail(models.Model):
     
     
 class Order(models.Model):
-    """[DE] Bestellung, die aus einem OfferDetail erstellt wird. [EN] Order created from an offer detail."""
+    """Order created from an offer detail."""
 
     STATUS_IN_PROGRESS = "in_progress"
     STATUS_COMPLETED = "completed"
@@ -79,12 +79,13 @@ class Order(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        """[DE] Meta-Informationen für Order. [EN] Meta information for Order."""
+        """Meta information for Order."""
 
         verbose_name = "Order"
         verbose_name_plural = "Orders"
         ordering = ["-created_at"]
 
     def __str__(self) -> str:
-        """[DE] String-Repräsentation der Bestellung. [EN] String representation of the order."""
+        """String representation of the order."""
         return f"Order #{self.pk} - {self.title}"
+

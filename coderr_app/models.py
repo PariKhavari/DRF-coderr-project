@@ -48,7 +48,7 @@ class OfferDetail(models.Model):
         ordering = ["price"]
 
     def __str__(self) -> str:
-        """[DE] String-Repräsentation des Angebotsdetails. [EN] String representation of the offer detail."""
+        """String representation of the offer detail."""
         return f"{self.offer.title} - {self.title}"
     
     

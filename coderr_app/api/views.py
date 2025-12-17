@@ -1,15 +1,17 @@
-from django.db.models import Min, Q
+from django.db.models import Min, Q, Avg
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, viewsets, status
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from django.contrib.auth.models import User
 from rest_framework.response import Response
 from rest_framework.views import APIView
+# from django.db.models import Avg
 
 from coderr_app.models import Offer, OfferDetail, Order, Review
 from coderr_app.api.permissions import IsBusinessUser, IsOfferOwner, IsCustomerUser, IsOrderBusinessUser
 from coderr_app.api.permissions import IsReviewOwner
 from coderr_app.api.serializers import ReviewSerializer
+from auth_app.models import UserProfile
 from rest_framework.exceptions import NotAuthenticated, PermissionDenied
 from coderr_app.api.serializers import (
     OfferDetailOfferSerializer,
@@ -40,7 +42,7 @@ class OfferViewSet(viewsets.ModelViewSet):
     http_method_names = ["get", "post", "patch", "delete", "head", "options"]
 
     def get_permissions(self):
-        """[DE] Setzt Permissions abhängig von der Aktion. [EN] Sets permissions depending on the action."""
+        """Sets permissions depending on the action."""
         if self.action == "list":
             permission_classes = [AllowAny]
         elif self.action == "create":
@@ -63,6 +65,7 @@ class OfferViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Builds queryset with filters and ordering."""
+
         queryset = Offer.objects.all().select_related("user").prefetch_related("details")
         queryset = queryset.annotate(min_price=Min("details__price"), min_delivery_time=Min("details__delivery_time_in_days"))
         queryset = self._apply_filters(queryset)
@@ -70,6 +73,7 @@ class OfferViewSet(viewsets.ModelViewSet):
 
     def _apply_filters(self, queryset):
         """Applies filters from query parameters."""
+
         params = self.request.query_params
         creator_id = params.get("creator_id")
         if creator_id:
@@ -87,6 +91,7 @@ class OfferViewSet(viewsets.ModelViewSet):
 
     def _apply_ordering(self, queryset):
         """Applies ordering to the queryset."""
+
         ordering = self.request.query_params.get("ordering")
         allowed = ["updated_at", "-updated_at", "min_price", "-min_price"]
         if ordering in allowed:
@@ -203,6 +208,7 @@ class OrderCountView(APIView):
 
     def get(self, request, business_user_id: int):
         """Returns order_count for status in_progress."""
+
         business_user = get_object_or_404(User, pk=business_user_id)
         profile = getattr(business_user, "profile", None)
         if not profile or profile.type != "business":
@@ -217,6 +223,7 @@ class CompletedOrderCountView(APIView):
 
     def get(self, request, business_user_id: int):
         """Returns completed_order_count for status completed."""
+        
         business_user = get_object_or_404(User, pk=business_user_id)
         profile = getattr(business_user, "profile", None)
 
@@ -301,7 +308,31 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         """Deletes a review (only owner)."""
-        
+
         review = self.get_object()
         review.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class BaseInfoView(APIView):
+    """Returns aggregated base information about the platform.
+    """
+
+    permission_classes = [AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        """Returns statistics about reviews, business profiles and offers.
+        """
+        review_count = Review.objects.count()
+        average = Review.objects.aggregate(value=Avg("rating"))["value"]
+        average_rating = round(average, 1) if average is not None else 0.0
+        business_profile_count = UserProfile.objects.filter(type="business").count()
+        offer_count = Offer.objects.count()
+
+        data = {
+            "review_count": review_count,
+            "average_rating": average_rating,
+            "business_profile_count": business_profile_count,
+            "offer_count": offer_count,
+        }
+        return Response(data)

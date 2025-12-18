@@ -10,12 +10,13 @@ This repository contains **only the backend**. No frontend code is included.
 
 ## Tech Stack
 
-- Python 3.11+  
-- Django 5+  
-- Django REST Framework  
-- SQLite (default, can be replaced with PostgreSQL/MySQL)  
-- djangorestframework-authtoken  
+- Python 3.11+
+- Django 6.0
+- Django REST Framework 3.16
+- django-cors-headers
+- python-dotenv (for loading environment variables from `.env`)
 - Pillow (for image fields)
+- SQLite as default database (can be replaced with PostgreSQL/MySQL)
 
 ---
 
@@ -50,6 +51,7 @@ manage.py
 ### Apps Overview
 
 - **auth_app**
+
   - User registration and login (token based)
   - User profiles with `type` field: `customer` or `business`
   - Profile endpoints for reading and updating
@@ -237,6 +239,7 @@ All API endpoints are prefixed with `/api/`.
 - **GET** `/api/offers/`  
   List offers with pagination, filtering and ordering.  
   Query params:
+
   - `creator_id`
   - `min_price`
   - `max_delivery_time`
@@ -295,6 +298,7 @@ All API endpoints are prefixed with `/api/`.
 
 - **GET** `/api/reviews/`  
   List reviews, with optional filtering and ordering. Query params:
+
   - `business_user_id`
   - `reviewer_id`
   - `ordering` (`updated_at`, `-updated_at`, `rating`, `-rating`)
@@ -326,25 +330,6 @@ All API endpoints are prefixed with `/api/`.
   ```
 
 - `average_rating` is calculated across all reviews and rounded to one decimal place.
-
----
-
-## Running Tests
-
-You can run the test suite with:
-
-```bash
-python manage.py test
-```
-
-> For the project DoD the goal is a test coverage of at least **95%**.
-
-If you prefer coverage measurement (optional):
-
-```bash
-coverage run manage.py test
-coverage report
-```
 
 ---
 

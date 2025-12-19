@@ -138,16 +138,14 @@ class OrderViewSet(viewsets.ModelViewSet):
         - For all others: only orders where the user is customer or business user.
         """
         user = self.request.user
-        if not user or not user.is_authenticated:
-            return Order.objects.none()
+        if user.is_staff:
+            return Order.objects.select_related("customer_user", "business_user")
 
-        base_qs = Order.objects.select_related("customer_user", "business_user")
-
-        if self.action == "destroy" and user.is_staff:
-            return base_qs
-
-        return base_qs.filter(Q(customer_user=user) | Q(business_user=user))
-
+        """Normal users: only orders where they are customer OR business user."""
+        return Order.objects.select_related("customer_user", "business_user").filter(
+            Q(customer_user=user) | Q(business_user=user)
+        )
+    
     def create(self, request, *args, **kwargs):
         """Creates an order from an offer detail.
         """
@@ -181,17 +179,47 @@ class OrderViewSet(viewsets.ModelViewSet):
     def partial_update(self, request, *args, **kwargs):
         """Updates only the status of an order.
         """
-        order = self.get_object()
+        order = get_object_or_404(
+            Order.objects.select_related("customer_user", "business_user"),
+            pk=kwargs.get("pk"),
+        )
+
+        user = request.user
+
+        if not user or not user.is_authenticated:
+            return Response(
+                {"detail": "Authentication credentials were not provided."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        if order.business_user != user:
+            return Response(
+                {
+                    "detail": (
+                        "Only the business user of this order can update the status."
+                    )
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         new_status = request.data.get("status")
-        allowed_status = {Order.STATUS_IN_PROGRESS, Order.STATUS_COMPLETED, Order.STATUS_CANCELLED}
+        allowed_status = {
+            Order.STATUS_IN_PROGRESS,
+            Order.STATUS_COMPLETED,
+            Order.STATUS_CANCELLED,
+        }
+
         if new_status not in allowed_status:
-            return Response({"detail": "Invalid status value."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "Invalid status value."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         order.status = new_status
         order.save()
+
         data = OrderSerializer(order).data
         return Response(data, status=status.HTTP_200_OK)
-    
 
     def destroy(self, request, *args, **kwargs):
         """Deletes an order.

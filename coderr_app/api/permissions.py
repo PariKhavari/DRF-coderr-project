@@ -56,15 +56,13 @@ class IsOrderBusinessUser(BasePermission):
 
     def has_object_permission(self, request, view, obj) -> bool:
         """Checks whether user is the business user of this order."""
-        user = request.user
-        if not user or not user.is_authenticated:
-            raise exceptions.NotAuthenticated()
-        profile = getattr(user, "profile", None)
-        if not profile or profile.type != "business":
-            raise exceptions.PermissionDenied("Only business users can update orders.")
-        if obj.business_user != user:
-            raise exceptions.PermissionDenied(self.message)
-        return True
+        if request.method in SAFE_METHODS:
+            return True
+
+        if request.method == "DELETE":
+            return bool(request.user and request.user.is_staff)
+
+        return getattr(obj, "business_user", None) == request.user
     
 
 class IsReviewOwnerOrReadOnly(BasePermission):

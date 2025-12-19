@@ -103,5 +103,5 @@ class CustomerProfileListSerializer(serializers.ModelSerializer):
         """Meta for CustomerProfileListSerializer."""
 
         model = UserProfile
-        fields = ["user", "username", "first_name", "last_name", "file","uploaded_at", "type" ]
+        fields = ["user", "username", "first_name", "last_name", "file", "type" ]
 

@@ -8,6 +8,9 @@ from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.generics import RetrieveUpdateAPIView, ListAPIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import PermissionDenied
 
 from auth_app.models import UserProfile
 
@@ -59,20 +62,17 @@ class LoginView(APIView):
 
 
 class ProfileDetailView(generics.RetrieveUpdateAPIView):
-    """Detail and update view for a profile."""
+    """Retrieve a single profile and allow editing only the own profile.
+    The pk in the URL is the USER ID, not the profile ID.."""
 
     queryset = UserProfile.objects.select_related("user")
     serializer_class = ProfileSerializer
     permission_classes = [IsAuthenticated,IsProfileOwnerOrReadOnly]
 
-    def get_object(self):
-        """ Retrieves the profile or raises 404 if not found."""
-        user_id = self.kwargs["pk"]
-        user = get_object_or_404(User, pk=user_id)
-        try:
-            return user.profile
-        except UserProfile.DoesNotExist:
-            raise Http404("User profile not found.")
+    """pk from the URL is matched against user_id (not the profile ID)."""
+    lookup_field = "user_id"
+    lookup_url_kwarg = "pk"
+
 
 class BusinessProfileListView(generics.ListAPIView):
     """List of all business profiles."""
@@ -97,3 +97,30 @@ class CustomerProfileListView(generics.ListAPIView):
         return UserProfile.objects.filter(type=UserProfile.TYPE_CUSTOMER).select_related("user")
 
 
+
+# class BusinessProfileListView(ListAPIView):
+#     """List all business profiles (authenticated users only).
+#     """
+
+#     serializer_class = ProfileSerializer
+#     permission_classes = [IsAuthenticated]
+
+#     def get_queryset(self):
+#         """Returns all profiles with type='business'.
+#         """
+#         return UserProfile.objects.select_related("user").filter(type="business")
+
+
+# class CustomerProfileListView(ListAPIView):
+#     """[DE] Liste aller Customer-Profile (nur für angemeldete Benutzer).
+#     [EN] List all customer profiles (authenticated users only).
+#     """
+
+#     serializer_class = ProfileSerializer
+#     permission_classes = [IsAuthenticated]
+
+#     def get_queryset(self):
+#         """[DE] Gibt alle Profile mit type='customer' zurück.
+#         [EN] Returns all profiles with type='customer'.
+#         """
+#         return UserProfile.objects.select_related("user").filter(type="customer")

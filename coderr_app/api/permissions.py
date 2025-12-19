@@ -1,5 +1,5 @@
 from rest_framework import exceptions
-from rest_framework.permissions import BasePermission
+from rest_framework.permissions import BasePermission, SAFE_METHODS
 
 
 class IsBusinessUser(BasePermission):
@@ -67,21 +67,15 @@ class IsOrderBusinessUser(BasePermission):
         return True
     
 
-    """[DE] Permissions für Offers, Orders und Reviews.
-[EN] Permissions for offers, orders and reviews.
-"""
-
-
-class IsReviewOwner(BasePermission):
+class IsReviewOwnerOrReadOnly(BasePermission):
     """Allows changes only for the review creator."""
 
     message = "You are not allowed to modify this review."
 
     def has_object_permission(self, request, view, obj) -> bool:
         """Checks whether the user is the reviewer."""
-        user = request.user
-        if not user or not user.is_authenticated:
-            raise exceptions.NotAuthenticated()
-        if obj.reviewer != user:
-            raise exceptions.PermissionDenied(self.message)
-        return True
+
+        if request.method in SAFE_METHODS:
+            return True
+
+        return getattr(obj, "reviewer", None) == request.user

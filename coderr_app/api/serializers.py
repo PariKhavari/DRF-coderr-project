@@ -5,6 +5,7 @@ from django.db.models import QuerySet
 from django.db.models import Q
 from rest_framework import serializers
 from coderr_app.models import Offer, OfferDetail, Order, Review
+from auth_app.models import UserProfile
 
 
 class OfferDetailSerializer(serializers.ModelSerializer):
@@ -215,16 +216,20 @@ class OrderCreateSerializer(serializers.Serializer):
         return data
 
 
-
 class ReviewSerializer(serializers.ModelSerializer):
-    """Serializer for reviews."""
+    """Serializer for representing a review.
+    """
 
-    business_user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
-    reviewer = serializers.IntegerField(source="reviewer.id", read_only=True)
+    business_user = serializers.IntegerField(
+        source="business_user.id",
+        read_only=True,
+    )
+    reviewer = serializers.IntegerField(
+        source="reviewer.id",
+        read_only=True,
+    )
 
     class Meta:
-        """Meta settings for ReviewSerializer."""
-
         model = Review
         fields = [
             "id",
@@ -235,39 +240,81 @@ class ReviewSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "reviewer", "created_at", "updated_at"]
+        read_only_fields = [
+            "id",
+            "business_user",
+            "reviewer",
+            "created_at",
+            "updated_at",
+        ]
+
+
+class ReviewCreateSerializer(serializers.Serializer):
+    """Serializer for creating a review.
+    """
+
+    business_user = serializers.IntegerField()
+    rating = serializers.IntegerField(min_value=1, max_value=5)
+    description = serializers.CharField(allow_blank=False, allow_null=False)
 
     def validate_business_user(self, value: int) -> int:
-        """Validates that the business user exists and has a business profile.
+        """Checks if the business user exists and has a business profile.
         """
         user = User.objects.filter(id=value).first()
-        profile = getattr(user, "profile", None) if user else None
-        if not user or not profile or profile.type != "business":
-            raise serializers.ValidationError("Business user not found or not of type 'business'.")
+        if user is None:
+            raise serializers.ValidationError(
+                "The specified business user does not exist."
+            )
+
+        profile = UserProfile.objects.filter(user=user).first()
+        if profile is None or profile.type != "business":
+            raise serializers.ValidationError(
+                "The specified user does not have a business profile."
+            )
+
         return value
 
-    def create(self, validated_data: dict) -> Review:
-        """Creates a review with the current user as reviewer.
+    def validate(self, attrs: dict) -> dict:
+        """Validates:
+        - the logged-in user has a customer profile
+        - there is no existing review from this customer for this business user
         """
         request = self.context.get("request")
+        user = getattr(request, "user", None)
+
+        if user is None or not user.is_authenticated:
+            raise serializers.ValidationError(
+                "You must be authenticated to create a review."
+            )
+
+        customer_profile = UserProfile.objects.filter(user=user).first()
+        if customer_profile is None or customer_profile.type != "customer":
+            raise serializers.ValidationError(
+                "Only users with a customer profile can create reviews."
+            )
+
+        return attrs
+
+    def create(self, validated_data: dict) -> Review:
+        """[DE] Erstellt die Bewertung mit dem eingeloggten User als reviewer.
+        [EN] Creates the review with the logged-in user as reviewer.
+        """
+        request = self.context["request"]
         reviewer = request.user
-        business_user_id = validated_data.pop("business_user")
+        business_user_id = validated_data["business_user"]
+
         business_user = User.objects.get(id=business_user_id)
-        return Review.objects.create(
+
+        review = Review.objects.create(
             business_user=business_user,
             reviewer=reviewer,
-            **validated_data,
+            rating=validated_data["rating"],
+            description=validated_data["description"],
         )
+        return review
 
-    def update(self, instance: Review, validated_data: dict) -> Review:
-        """Updates only rating and description.
+    def to_representation(self, instance: Review) -> dict:
+        """Always use the normal ReviewSerializer for the response representation.
         """
-        rating = validated_data.get("rating")
-        description = validated_data.get("description")
-        if rating is not None:
-            instance.rating = rating
-        if description is not None:
-            instance.description = description
-        instance.save()
-        return instance
+        return ReviewSerializer(instance).data
 

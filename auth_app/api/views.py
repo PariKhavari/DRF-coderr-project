@@ -1,6 +1,4 @@
 from django.contrib.auth import authenticate
-from django.shortcuts import get_object_or_404
-
 from rest_framework import generics, status
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny, IsAuthenticated

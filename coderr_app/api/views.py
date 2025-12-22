@@ -102,6 +102,21 @@ class OfferViewSet(viewsets.ModelViewSet):
                 )
             queryset = queryset.filter(min_delivery_time__lte=max_delivery_value)
 
+        creator_id = params.get("creator_id")
+        if creator_id is not None:
+            queryset = queryset.filter(user_id=creator_id)
+
+        search_query = params.get("search")
+        if search_query:
+            queryset = queryset.filter(
+                Q(title__icontains=search_query)
+                | Q(description__icontains=search_query)
+            )
+
+        ordering = params.get("ordering")
+        if ordering in ("updated_at", "-updated_at", "min_price", "-min_price"):
+            queryset = queryset.order_by(ordering)
+
         return queryset
 
     def _apply_filters(self, queryset):

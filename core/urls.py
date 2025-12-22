@@ -23,8 +23,3 @@ urlpatterns = [
     path("api/", include("coderr_app.api.urls")),
     path("api-auth/", include("rest_framework.urls")),
 ]
-
-
-
-
-

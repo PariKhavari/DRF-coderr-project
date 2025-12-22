@@ -4,6 +4,7 @@ from django.db.models import Min
 from rest_framework import serializers
 from coderr_app.models import Offer, OfferDetail, Order, Review
 from auth_app.models import UserProfile
+from rest_framework.exceptions import PermissionDenied
 
 
 class OfferDetailSerializer(serializers.ModelSerializer):
@@ -287,7 +288,7 @@ class ReviewCreateSerializer(serializers.Serializer):
 
         profile = UserProfile.objects.filter(user=user).first()
         if profile is None or profile.type != "customer":
-            raise serializers.ValidationError(
+            raise PermissionDenied(
                 "Only users with a customer profile can create reviews."
             )
 

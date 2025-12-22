@@ -1,4 +1,5 @@
 from django.db.models import Min, Q, Avg
+from rest_framework.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, viewsets, status
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
@@ -64,12 +65,44 @@ class OfferViewSet(viewsets.ModelViewSet):
         return OfferWriteSerializer
 
     def get_queryset(self):
-        """Builds queryset with filters and ordering."""
+        """Returns filtered offers and validates filter types.
+        """
+        queryset = (Offer.objects.annotate(min_price=Min("details__price"),min_delivery_time=Min("details__delivery_time_in_days"),)
+            .select_related("user")
+            .prefetch_related("details")
+        )
 
-        queryset = Offer.objects.all().select_related("user").prefetch_related("details")
-        queryset = queryset.annotate(min_price=Min("details__price"), min_delivery_time=Min("details__delivery_time_in_days"))
-        queryset = self._apply_filters(queryset)
-        return self._apply_ordering(queryset)
+        params = self.request.query_params
+
+        min_price = params.get("min_price")
+        if min_price is not None:
+            try:
+                min_price_value = float(min_price)
+            except ValueError:
+                raise ValidationError(
+                    {
+                        "min_price": (
+                            "min_price must be a float value."
+                        )
+                    }
+                )
+            queryset = queryset.filter(min_price__gte=min_price_value)
+
+        max_delivery_time = params.get("max_delivery_time")
+        if max_delivery_time is not None:
+            try:
+                max_delivery_value = int(max_delivery_time)
+            except ValueError:
+                raise ValidationError(
+                    {
+                        "max_delivery_time": (
+                            "max_delivery_time must be an integer."
+                        )
+                    }
+                )
+            queryset = queryset.filter(min_delivery_time__lte=max_delivery_value)
+
+        return queryset
 
     def _apply_filters(self, queryset):
         """Applies filters from query parameters."""
@@ -106,7 +139,7 @@ class OfferDetailView(generics.RetrieveAPIView):
     permission_classes = [IsAuthenticated]
 
 
-class OrderViewSet(viewsets.ModelViewSet):
+class OrderViewSet(viewsets.ModelViewSet): 
     """ViewSet for orders."""
 
     queryset = Order.objects.all().select_related("customer_user", "business_user")

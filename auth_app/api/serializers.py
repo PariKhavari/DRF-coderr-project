@@ -90,7 +90,6 @@ class BusinessProfileListSerializer(serializers.ModelSerializer):
         fields = ["user", "username", "first_name", "last_name", "file", "location", "tel", "description", "working_hours", "type"]
         
 
-
 class CustomerProfileListSerializer(serializers.ModelSerializer):
     """Serializer for the customer profiles list."""
 
@@ -104,4 +103,3 @@ class CustomerProfileListSerializer(serializers.ModelSerializer):
 
         model = UserProfile
         fields = ["user", "username", "first_name", "last_name", "file", "type" ]
-

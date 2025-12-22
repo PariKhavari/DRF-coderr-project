@@ -1,8 +1,6 @@
 from django.contrib.auth.models import User
 from django.urls import reverse
 from django.db.models import Min
-from django.db.models import QuerySet
-from django.db.models import Q
 from rest_framework import serializers
 from coderr_app.models import Offer, OfferDetail, Order, Review
 from auth_app.models import UserProfile
@@ -152,7 +150,7 @@ class OfferListSerializer(serializers.ModelSerializer):
         return {"first_name": user.first_name, "last_name": user.last_name, "username": user.username}
 
 class OfferDetailOfferSerializer(serializers.ModelSerializer):
-    """[DE] Serializer für Offer-Detailsicht. [EN] Serializer for single-offer detail view."""
+    """Serializer for single-offer detail view."""
 
     user = serializers.IntegerField(source="user.id", read_only=True)
     details = serializers.SerializerMethodField()
@@ -178,11 +176,11 @@ class OfferDetailOfferSerializer(serializers.ModelSerializer):
         return results
 
     def get_min_price(self, obj: Offer):
-        """[DE] Minimaler Detailpreis. [EN] Minimal detail price."""
+        """Minimal detail price."""
         return obj.details.aggregate(value=Min("price"))["value"]
 
     def get_min_delivery_time(self, obj: Offer):
-        """[DE] Minimale Lieferzeit. [EN] Minimal delivery time."""
+        """Minimal delivery time."""
         return obj.details.aggregate(value=Min("delivery_time_in_days"))["value"]
 
 
@@ -255,7 +253,7 @@ class ReviewCreateSerializer(serializers.Serializer):
 
     business_user = serializers.IntegerField()
     rating = serializers.IntegerField(min_value=1, max_value=5)
-    description = serializers.CharField(allow_blank=False, allow_null=False)
+    description = serializers.CharField(allow_blank=True)
 
     def validate_business_user(self, value: int) -> int:
         """Checks if the business user exists and has a business profile.
@@ -287,8 +285,8 @@ class ReviewCreateSerializer(serializers.Serializer):
                 "You must be authenticated to create a review."
             )
 
-        customer_profile = UserProfile.objects.filter(user=user).first()
-        if customer_profile is None or customer_profile.type != "customer":
+        profile = UserProfile.objects.filter(user=user).first()
+        if profile is None or profile.type != "customer":
             raise serializers.ValidationError(
                 "Only users with a customer profile can create reviews."
             )
@@ -296,25 +294,21 @@ class ReviewCreateSerializer(serializers.Serializer):
         return attrs
 
     def create(self, validated_data: dict) -> Review:
-        """[DE] Erstellt die Bewertung mit dem eingeloggten User als reviewer.
-        [EN] Creates the review with the logged-in user as reviewer.
+        """Creates the review instance.
         """
         request = self.context["request"]
         reviewer = request.user
-        business_user_id = validated_data["business_user"]
+        business_user = User.objects.get(id=validated_data["business_user"])
 
-        business_user = User.objects.get(id=business_user_id)
-
-        review = Review.objects.create(
+        return Review.objects.create(
             business_user=business_user,
             reviewer=reviewer,
             rating=validated_data["rating"],
-            description=validated_data["description"],
-        )
+            description=validated_data.get("description", ""),
+                )
         return review
 
     def to_representation(self, instance: Review) -> dict:
         """Always use the normal ReviewSerializer for the response representation.
         """
         return ReviewSerializer(instance).data
-

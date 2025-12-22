@@ -8,18 +8,6 @@ This repository contains **only the backend**. No frontend code is included.
 
 ---
 
-## Tech Stack
-
-- Python 3.11+
-- Django 6.0
-- Django REST Framework 3.16
-- django-cors-headers
-- python-dotenv (for loading environment variables from `.env`)
-- Pillow (for image fields)
-- SQLite as default database (can be replaced with PostgreSQL/MySQL)
-
----
-
 ## Project Structure
 
 ```text
@@ -89,25 +77,35 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-> Make sure `Pillow` is installed, otherwise Django will complain about `ImageField`.
+
+---
+## Tech Stack
+
+- Python 3.11+
+- Django 6.0
+- Django REST Framework 3.16
+- django-cors-headers
+- python-dotenv (for loading environment variables from `.env`)
+- Pillow (for image fields)
+- SQLite as default database (can be replaced with PostgreSQL/MySQL)
 
 ---
 
 ## Configuration
 
-All basic configuration lives in `core/settings.py`.
+All sensitive configuration (like the Django `SECRET_KEY`) must be provided via
+environment variables and **must not** be hard-coded in `core/settings.py` or
+committed to Git.
 
-For a local development setup you can keep the default settings (SQLite + DEBUG=True),
-or provide environment variables for a more advanced setup.
+For local development it is recommended to use a `.env` file in the project root
+(next to `manage.py`). The project uses `python-dotenv` to load these values.
 
-Typical environment variables:
+Example `.env` file:
 
-- `DJANGO_SECRET_KEY` – override default secret key
-- `DJANGO_DEBUG` – `"True"` or `"False"`
-- `DJANGO_ALLOWED_HOSTS` – comma separated list of hosts
-
-If you switch to PostgreSQL or another database, adjust `DATABASES` in `core/settings.py`
-and set the required environment variables accordingly.
+```env
+SECRET_KEY=your-secure-django-secret-key
+DEBUG=True
+ALLOWED_HOSTS=127.0.0.1,localhost
 
 ---
 

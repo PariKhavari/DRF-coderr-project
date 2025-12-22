@@ -1,6 +1,4 @@
 from django.contrib.auth import authenticate
-from django.contrib.auth.models import User
-from django.http import Http404
 from django.shortcuts import get_object_or_404
 
 from rest_framework import generics, status
@@ -8,10 +6,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.generics import RetrieveUpdateAPIView, ListAPIView
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.exceptions import PermissionDenied
-
 from auth_app.models import UserProfile
 
 from .permissions import IsProfileOwnerOrReadOnly
@@ -95,32 +90,3 @@ class CustomerProfileListView(generics.ListAPIView):
     def get_queryset(self):
         """Filters profiles with type 'customer'."""
         return UserProfile.objects.filter(type=UserProfile.TYPE_CUSTOMER).select_related("user")
-
-
-
-# class BusinessProfileListView(ListAPIView):
-#     """List all business profiles (authenticated users only).
-#     """
-
-#     serializer_class = ProfileSerializer
-#     permission_classes = [IsAuthenticated]
-
-#     def get_queryset(self):
-#         """Returns all profiles with type='business'.
-#         """
-#         return UserProfile.objects.select_related("user").filter(type="business")
-
-
-# class CustomerProfileListView(ListAPIView):
-#     """[DE] Liste aller Customer-Profile (nur für angemeldete Benutzer).
-#     [EN] List all customer profiles (authenticated users only).
-#     """
-
-#     serializer_class = ProfileSerializer
-#     permission_classes = [IsAuthenticated]
-
-#     def get_queryset(self):
-#         """[DE] Gibt alle Profile mit type='customer' zurück.
-#         [EN] Returns all profiles with type='customer'.
-#         """
-#         return UserProfile.objects.select_related("user").filter(type="customer")

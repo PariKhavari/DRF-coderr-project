@@ -8,7 +8,7 @@ class IsBusinessUser(BasePermission):
     message = "Only business users can perform this action."
 
     def has_permission(self, request, view) -> bool:
-        """[DE] Prüft, ob der Benutzer ein Business-Profil hat. [EN] Checks whether the user has a business profile."""
+        """Checks whether the user has a business profile."""
         user = request.user
         if not user or not user.is_authenticated:
             raise exceptions.NotAuthenticated()
@@ -39,7 +39,7 @@ class IsCustomerUser(BasePermission):
     message = "Only customer users can perform this action."
 
     def has_permission(self, request, view) -> bool:
-        """[DE] Prüft, ob der Benutzer ein Customer-Profil hat. [EN] Checks whether the user has a customer profile."""
+        """Checks whether the user has a customer profile."""
         user = request.user
         if not user or not user.is_authenticated:
             raise exceptions.NotAuthenticated()

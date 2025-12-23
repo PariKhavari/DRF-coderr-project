@@ -111,6 +111,12 @@ ALLOWED_HOSTS=127.0.0.1,localhost
 
 ## Database Setup
 
+Run the mingration: 
+
+```bash
+pathon manage.py migrate
+
+
 Create a superuser (for the Django admin):
 
 ```bash
